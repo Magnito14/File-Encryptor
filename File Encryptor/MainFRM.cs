@@ -84,7 +84,7 @@ namespace File_Encryptor
             {
                 foreach (var v in listBox1.Items)
                 {
-                    if (!(!($"{v}").Trim().EndsWith(".!LOCKED") || !File.Exists($"{v}")))
+                    if (!(!$"{v}".Trim().EndsWith(".!LOCKED") || !File.Exists($"{v}")))
                     {
                         DecryptFile($"{v}", ($"{v}").TrimEnd(chars), textBox1.Text);
                         File.Delete($"{v}");
@@ -109,43 +109,34 @@ namespace File_Encryptor
 
         private void EncryptFile(string szInputFile, string szOutputFile, string szPassword)
         {
-            try
+            var key = new UnicodeEncoding().GetBytes(szPassword);
+
+            using (var aes = Aes.Create())
+            using (var fileStreamIn = new FileStream(szInputFile, FileMode.Open))
+            using (var fileStreamOut = new FileStream(szOutputFile, FileMode.Create))
+            using (var cryptoStream = new CryptoStream(fileStreamOut, aes.CreateEncryptor(key, key), CryptoStreamMode.Write))
             {
-                var key = new UnicodeEncoding().GetBytes(szPassword);
-                var cryptFile = szOutputFile;
+                var data = 0;
 
-                using (var rijndaelManaged = new RijndaelManaged())
-                using (var fileStreamIn = new FileStream(szInputFile, FileMode.Open))
-                using (var fileStreamOut = new FileStream(cryptFile, FileMode.Create))
-                using (var cryptoStream = new CryptoStream(fileStreamOut, rijndaelManaged.CreateEncryptor(key, key), CryptoStreamMode.Write))
-                {
-                    var data = 0;
-
-                    while ((data = fileStreamIn.ReadByte()) != -1)
-                        cryptoStream.WriteByte((byte)data);
-                }
+                while ((data = fileStreamIn.ReadByte()) != -1)
+                    cryptoStream.WriteByte((byte)data);
             }
-            catch { }
         }
 
         private void DecryptFile(string szInputFile, string szOutputFile, string szPassword)
         {
-            try
+            var key = new UnicodeEncoding().GetBytes(szPassword);
+
+            using (var aes = Aes.Create())
+            using (var fileStreamIn = new FileStream(szInputFile, FileMode.Open))
+            using (var fileStreamOut = new FileStream(szOutputFile, FileMode.Create))
+            using (var cryptoStream = new CryptoStream(fileStreamIn, aes.CreateDecryptor(key, key), CryptoStreamMode.Read))
             {
-                var key = new UnicodeEncoding().GetBytes(szPassword);
+                var data = 0;
 
-                using (var rijndaelManaged = new RijndaelManaged())
-                using (var fileStreamIn = new FileStream(szInputFile, FileMode.Open))
-                using (var fileStreamOut = new FileStream(szOutputFile, FileMode.Create))
-                using (var cryptoStream = new CryptoStream(fileStreamIn, rijndaelManaged.CreateDecryptor(key, key), CryptoStreamMode.Read))
-                {
-                    var data = 0;
-
-                    while ((data = cryptoStream.ReadByte()) != -1)
-                        fileStreamOut.WriteByte((byte)data);
-                }
+                while ((data = cryptoStream.ReadByte()) != -1)
+                    fileStreamOut.WriteByte((byte)data);
             }
-            catch { }
         }
 
         private string GeneratePassword()
@@ -153,10 +144,7 @@ namespace File_Encryptor
             var random = new Random();
 
             var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-            var password = new string(Enumerable.Repeat(characters, 10).Select(str =>
-            {
-                return str[random.Next(str.Length)];
-            }).ToArray());
+            var password = new string(Enumerable.Repeat(characters, 8).Select(str => str[random.Next(str.Length)]).ToArray());
 
             return password;
         }
